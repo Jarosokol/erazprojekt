@@ -7,7 +7,7 @@ class GoodnightSpider(scrapy.Spider):
     name = "goodnight"
     allowed_domains = ["goodnight.at"]
     # You can parameterize the date later
-    date = "2025-10-17"
+    date = "2025-10-21"
 
     custom_settings = {
         "FEEDS": {
@@ -40,21 +40,16 @@ class GoodnightSpider(scrapy.Spider):
                 link = ev.get("event_link")
                 desc = ev.get("teaser_text", "")
                 start = ev.get("time_start")
-                end = ev.get("time_end")
 
                 # combine date + time
                 date_full = f"{date_raw} {start}" if start else date_raw
-
-                content = f"{title} — {location or ''} — {date_full}"
 
                 yield {
                     "Title": title,
                     "Venue": location,
                     "Date": date_full,
-                    "EndTime": end,
                     "Description": desc,
                     "Link": link,
-                    "content": content,
                 }
 
 

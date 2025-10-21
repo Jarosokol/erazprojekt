@@ -1,71 +1,66 @@
-import sys
-import types
+import os
+
+import requests
 import json
-import asyncio
-from telegram import Bot
-from telegram.constants import ParseMode
-from datetime import datetime
+from dotenv import load_dotenv
 
-# 🩹 Fix for Python 3.13 (imghdr removed)
-if 'imghdr' not in sys.modules:
-    imghdr = types.ModuleType("imghdr")
-    def what(file, h=None): return None
-    imghdr.what = what
-    sys.modules['imghdr'] = imghdr
+load_dotenv()
+KEY = str(os.getenv('KEY'))
+CHAT_ID = str(os.getenv('CHAT_ID'))
 
-# --- CONFIG ---
-TELEGRAM_TOKEN = "8351086651:AAGWf57Dz9QX1kbN4knJ21unk4bDsDiQjCg"   # 🟡 Replace with your bot token
-CHAT_ID = "-1002816889809"            # 🟡 Replace with your chat ID
-JSON_FILE = "goodnight.json"             # Path to JSON file with scraped data
+def send_data_to_telegram():
+    json_file = 'Goodnight.json'
 
+    # Load JSON file
+    with open(json_file, 'r', encoding='utf-8') as f:
+        data = json.load(f)
 
-async def send_to_telegram(message: str):
-    """Send one message to Telegram."""
-    bot = Bot(token=TELEGRAM_TOKEN)
-    async with bot:
-        await bot.send_message(
-            chat_id=CHAT_ID,
-            text=message,
-            parse_mode=ParseMode.HTML
-        )
+    links = []
+    dates = []
+    ddate = [] # day of week
+    titles = []
+
+    for item in data:
+        date = item['Date']
+        link = item['Link']
+        title = item['Title']
+        venue = item['Venue']
+        location = item['Location']
 
 
-def format_event(event):
-    """Format event info nicely for Telegram."""
-    title = f"<b>{event.get('Title', 'No title')}</b>"
-    date = event.get('Date', 'N/A')
-    venue = event.get('Venue', 'N/A')
-    desc = event.get('Description', '')
-    link = event.get('Link', '')
+        content = item["Description"]
+        s1 = [item.replace('\n', "") for item in content]
+        s2 = [item.replace('\nx', "") for item in s1]
+        s3 = [item.replace('x ', "") for item in s2]
+        s4 = [item.replace('\xa0', "") for item in s3]
 
-    msg = f"📅 <b>{date}</b>\n📍 <i>{venue}</i>\n\n{desc}"
-    if link:
-        msg += f"\n\n🔗 <a href='{link}'>More info</a>"
+        content = "".join(s4)
 
-    return f"{title}\n\n{msg}"
+        # Cut content at around 350 characters, ending with a dot
+        if len(content) > 350:
+            # Find the last dot within the first 350 characters
+            last_dot = content[:350].rfind('.')
+            if last_dot != -1:
+                content = content[:last_dot + 1]  # Include the dot
+            else:
+                # If no dot found, just cut at 350 characters
+                content = content[:350] + "..."
 
+        print(content)
+        message = (title +
+                   "\n📅 Date: " + date +
+                   "\n🗺️ Location: " + location +
+                   "\n🪩 Venue: " + venue +
+                   "\n🗒️ Description: \n" + content +
+                   ("\n🔗 More information: \n" + link ) if link else "")
+        requests.post(f'https://api.telegram.org/bot{KEY}/sendMessage?chat_id={CHAT_ID}&text=%s' % message)
 
-async def main():
-    """Read JSON and send all events."""
-    try:
-        with open(JSON_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception as e:
-        print(f"⚠️ Could not read {JSON_FILE}: {e}")
-        return
-
-    if not data:
-        print("⚠️ No events found in JSON.")
-        return
-
-    print(f"📨 Sending {len(data)} events to Telegram...")
-    for item in data[:10]:  # send first 10 to avoid spam
-        msg = format_event(item)
-        await send_to_telegram(msg)
-        await asyncio.sleep(1.5)  # avoid Telegram rate limit
-
-    print("✅ Done sending events!")
+    # print(dates)
+    #print("Datum:", dates[0])
+    #print("Titel:",titles[0])
+    #print("Link:",links[0])
 
 
-if __name__ == "__main__":
-    asyncio.run(main())
+
+
+send_data_to_telegram()
