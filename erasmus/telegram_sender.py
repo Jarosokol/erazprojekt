@@ -25,7 +25,6 @@ def send_data_to_telegram():
         link = item['Link']
         title = item['Title']
         venue = item['Venue']
-        location = item['Location']
 
 
         content = item["Description"]
@@ -49,7 +48,6 @@ def send_data_to_telegram():
         print(content)
         message = (title +
                    "\n📅 Date: " + date +
-                   "\n🗺️ Location: " + location +
                    "\n🪩 Venue: " + venue +
                    "\n🗒️ Description: \n" + content +
                    ("\n🔗 More information: \n" + link ) if link else "")
